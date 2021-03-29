@@ -4,54 +4,52 @@ import numpy as np
 from scipy.optimize import minimize
 from numba import njit, jit
 
-def minimize_w(Σ, g, ε0):
+def minimize_w(portfolio):
     """Find set of weights that minimizes the tracking error.
 
     Parameters
     ----------
-    Σ: array_like
-        Correlation matrix.
-
-    g: array_like
-        Correlation with index vector.
-
-    ε0: float
-        Average squared index return.
-
-    Return
-    ------
-    w: array_like
-        Set of weights that minimize the tracking error.
-
-    Terr: float
-        Value of the minimized tracking error.
+    portfolio: Portfolio object.
+        Object with information about purchased stocks, daily returns and correlation matrices.
 
     """
-    N = np.size(g)
-    
-    w0 = np.random.rand(N)
-    w0 /= np.sum(w0)
-    
-    # Loss functions.    
+    # Number and indices of purchased stocks.
+    d = np.count_nonzero(portfolio.n)
+    ix_d = np.where(d == True)[0]
+
+    # Make correlation matrices only with purchased stocks.
+    Σ = np.zeros((d, d))
+    g = np.zeros(d)
+    for i, ix in ix_d:
+        g[i] = portfolio.g[ix]
+        for j, jx in ix_d:
+            Σ[i, j] = portfolio.Σ[ix, jx]
+
+    # Loss function with tracking error.    
     def f(w):
-        Terr = np.dot(w, Σ@w) - 2*np.dot(g, w) + ϵ0
+        Terr = np.dot(w, Σ@w) - 2*np.dot(g, w) + portfolio.ε0
         return Terr
     
+    # Jacobian of tracking error.
     def j(w):
         dTerr = 2*np.dot(Σ, w) - 2*g
         return dTerr
     
-    # Constraints:
+    # Constraints: all weights are positive and add up to 1.
     # w_i >= 0.
-    bnds = [(0, None) for i in range(N)]
+    bnds = [(0, None) for i in range(d)]
     # sum(w_i) == 1.
     cons = ({'type': 'eq', 'fun': lambda x:  np.sum(x) - 1})
 
+    # Random initalization of weights.
+    w0 = np.random.rand(d)
+    w0 /= np.sum(w0)
+    
+    # Solve minimization problem.
     res = minimize(f, w0, jac=j, bounds=bnds, constraints=cons)
-    w = res.x
-    Terr = res.fun
+    portfolio.w = res.x
 
-    return w, Terr
+    return
 
 
 def choose_stocks_brute_force(d, w, Σ, g, ε0):
