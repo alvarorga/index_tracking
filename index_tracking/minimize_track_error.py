@@ -15,14 +15,14 @@ def minimize_w(portfolio):
     """
     # Number and indices of purchased stocks.
     d = np.count_nonzero(portfolio.n)
-    ix_d = np.where(d == True)[0]
+    ix_d = np.where(portfolio.n == True)[0]
 
     # Make correlation matrices only with purchased stocks.
     Σ = np.zeros((d, d))
     g = np.zeros(d)
-    for i, ix in ix_d:
+    for i, ix in enumerate(ix_d):
         g[i] = portfolio.g[ix]
-        for j, jx in ix_d:
+        for j, jx in enumerate(ix_d):
             Σ[i, j] = portfolio.Σ[ix, jx]
 
     # Loss function with tracking error.    
