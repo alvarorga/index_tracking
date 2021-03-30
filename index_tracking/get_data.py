@@ -118,3 +118,15 @@ class Portfolio:
             self.g[i] = np.dot(self.returns[ticker_i], self.returns[ticker_index])
             for j, ticker_j in enumerate(tickers):
                 self.Σ[i, j] = np.dot(self.returns[ticker_i], self.returns[ticker_j])
+
+    def compute_tracking_error(self):
+        """Compute tracking error of the portfolio."""
+        Terr = self.ε0
+        for i in range(self.N):
+            if self.n[i]:
+                Terr += -2*self.g[i]*self.w[i]
+                for j in range(self.N):
+                    if self.n[j]:
+                        Terr += self.w[i]*self.Σ[i, j]*self.w[j]
+
+        return Terr
