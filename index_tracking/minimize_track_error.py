@@ -52,7 +52,61 @@ def minimize_w(portfolio):
     return
 
 
-def choose_stocks_brute_force(d, w, Σ, g, ε0):
+def solve_qubo(pf, d, method='exhaustive', update_potfolio=False):
+    """Choose a set of d stocks from a portfolio solving a QUBO problem.
+    
+    Parameters
+    ----------
+    pf: Portfolio object
+        The Portfolio with available and purchased stocks. The stocks to choose
+        from are given by True values in the array pf.n.
+
+    d: int
+        Number of stocks to choose.
+
+    method: string
+        Method to solve QUBO. Available:
+        - 'exhaustive': exhaustive search over all possible stock combinations.
+            It guarantees to return the exact solution. Default method.
+
+    update_potfolio: bool
+        If True the value of pf.n is updated with the QUBO solution. Default is 
+        False.
+
+    Return
+    ------
+    stocks: 1d array of boolean
+        Similar to pf.n. True values represent the d stocks that have been chosen 
+            by the QUBO solver.
+
+    terr: float
+        Value of the minimized tracking error.
+
+    """
+    stocks = np.zeros(pf.N, dtype=np.bool)
+
+    # Redefine N to be the universe of available stocks to choose.
+    N = np.count_nonzero(pf.n)
+    ix_available = np.where(pf.n == True)[0]
+
+    # Make correlation matrices only with purchased stocks.
+    Σ = np.zeros((N, N))
+    g = np.zeros(N)
+    for i, ix in enumerate(ix_available):
+        g[i] = pf.g[ix]
+        for j, jx in enumerate(ix_available):
+            Σ[i, j] = pf.Σ[ix, jx]
+
+    if method == 'exhaustive':
+        stocks, terr = solve_qubo_exhaustive(d, pf.w, Σ, g, pf.ε0)
+
+    if update_potfolio:
+        pf.n = stocks
+
+    return stocks, terr
+
+
+def solve_qubo_exhaustive(d, w, Σ, g, ε0):
     """Choose a number d of stocks that minimizes the tracking error.
 
     The function searches over all possible combinations of d stocks.
