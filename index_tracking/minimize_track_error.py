@@ -4,13 +4,17 @@ import numpy as np
 from scipy.optimize import minimize
 from numba import njit, jit
 
-def minimize_w(portfolio):
+def minimize_w(portfolio, update_portfolio=False):
     """Find set of weights that minimizes the tracking error.
 
     Parameters
     ----------
     portfolio: Portfolio object.
         Object with information about purchased stocks, daily returns and correlation matrices.
+
+    update_potfolio: bool
+        If True the value of pf.n is updated with the QUBO solution. Default is 
+        False.
 
     """
     # Number and indices of purchased stocks.
@@ -47,7 +51,9 @@ def minimize_w(portfolio):
     
     # Solve minimization problem.
     res = minimize(f, w0, jac=j, bounds=bnds, constraints=cons)
-    portfolio.w = res.x
+
+    if update_portfolio:
+        portfolio.w = res.x
 
     return
 
