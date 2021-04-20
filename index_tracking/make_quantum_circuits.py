@@ -1,6 +1,7 @@
-"""Make quantum circuits such as QAOA, SWAP QAOA or VQE."""
+"""Make quantum circuits such as QAOA, SWAP or VQE."""
 
 
+import numpy as np
 from qiskit import QuantumCircuit
 
 
@@ -57,6 +58,68 @@ def make_QAOA(N, params, Σ, g):
         # Make drift Hamiltonian.
         for i in range(N):
             qc.rx(-β_vals[ip], i)
+
+        qc.barrier()
+
+    # Measurement.
+    qc.measure(range(N), range(N))
+
+    return qc
+
+
+def make_SWAP(N, d, params):
+    """Make SWAP circuit.
+
+    Parameters
+    ----------
+    N: int
+        Number of qubits.
+
+    d: int
+        Number of spin excitations in the circuit. It is equivalent to 
+        the number of stocks to buy.
+
+    params: 1d array of floats
+        Gate parameters. Size of array is p*N, with p the number of
+        SWAP layers. If reshapen to shape (p, N), params[ip, iq] is the
+        applied angle at the layer ip to the qubit with index iq.
+
+    Return
+    ------
+    qc: Qiskit Quantum Circuit
+        QAOA quantum circuit.
+
+    """
+    
+    # Circuit layers and parameters.
+    p = params.size//N
+    θ = np.reshape(params, (p, N))
+    
+    # Prepare quantum circuit.
+    qc = QuantumCircuit(N, N)
+
+    # Initialize in equispaced excitations.
+    # Distance between excited qubits.
+    dist = np.floor(N/d).astype(int)
+    for i in range(d):
+        qc.x(i*dist)
+
+    qc.barrier()
+
+    # Make circuit layers.
+    for ip in range(p):
+        # Make rotations.
+        for i in range(N):
+            qc.p(θ[ip, i], i)
+
+        qc.barrier()
+
+        # Make SWAP gates.
+        for i in range(N-1):
+            qc.p(np.pi/4, i)
+            qc.p(np.pi/4, i+1)
+            qc.cp(-np.pi/2, i, i+1)
+            qc.swap(i, i+1)
 
         qc.barrier()
 
